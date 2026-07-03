@@ -35,12 +35,11 @@ class ModelTrainer:
 
             models = {
                 "LogisticRegression": LogisticRegression(
-                    max_iter=1000, class_weight="balanced"),
+                    max_iter=2000, class_weight="balanced"),
                 "DecisionTree": DecisionTreeClassifier(
                     class_weight="balanced", random_state=42),
                 "RandomForest": RandomForestClassifier(
-                    n_estimators=100, class_weight="balanced",
-                    n_jobs=-1, random_state=42),
+                    class_weight="balanced", n_jobs=-1, random_state=42),
                 "HistGradientBoosting": HistGradientBoostingClassifier(
                     class_weight="balanced", random_state=42),
                 "XGBoost": XGBClassifier(
@@ -48,13 +47,40 @@ class ModelTrainer:
                     eval_metric="logloss", n_jobs=-1, random_state=42),
             }
 
-            logging.info("Evaluating models (this may take a couple of minutes)")
-            report = evaluate_models(X_train, y_train, X_test, y_test, models)
-            logging.info(f"Model report (ROC-AUC): {report}")
+            params = {
+                "LogisticRegression": {
+                    "C": [0.01, 0.1, 1, 10],
+                    "penalty": ["l2"],
+                    "solver": ["lbfgs"],
+                },
+                "DecisionTree": {
+                    "max_depth": [5, 10, 20, None],
+                    "min_samples_split": [2, 10, 50],
+                },
+                "RandomForest": {
+                    "n_estimators": [100, 200],
+                    "max_depth": [10, 20, None],
+                },
+                "HistGradientBoosting": {
+                    "learning_rate": [0.05, 0.1],
+                    "max_iter": [100, 200],
+                    "max_depth": [None, 10],
+                },
+                "XGBoost": {
+                    "n_estimators": [100, 200],
+                    "max_depth": [3, 6],
+                    "learning_rate": [0.05, 0.1],
+                },
+            }
+
+            logging.info("Tuning + evaluating models with GridSearchCV")
+            report, fitted = evaluate_models(
+                X_train, y_train, X_test, y_test, models, params)
+            logging.info(f"Tuned model report (ROC-AUC): {report}")
 
             best_model_name = max(report, key=report.get)
             best_model_score = report[best_model_name]
-            best_model = models[best_model_name]
+            best_model = fitted[best_model_name]          # the *tuned* fitted model
 
             if best_model_score < 0.5:
                 raise CustomException("No good model found", sys)
