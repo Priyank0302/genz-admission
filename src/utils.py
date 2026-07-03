@@ -2,6 +2,8 @@ import os
 import sys
 import dill
 
+from sklearn.metrics import roc_auc_score
+
 from src.exception import CustomException
 
 
@@ -21,5 +23,21 @@ def load_object(file_path):
     try:
         with open(file_path, "rb") as file_obj:
             return dill.load(file_obj)
+    except Exception as e:
+        raise CustomException(e, sys)
+
+
+def evaluate_models(X_train, y_train, X_test, y_test, models):
+    """Fit each model and score it by test ROC-AUC. Returns {name: auc}."""
+    try:
+        report = {}
+        for name, model in models.items():
+            model.fit(X_train, y_train)
+            if hasattr(model, "predict_proba"):
+                y_test_proba = model.predict_proba(X_test)[:, 1]
+            else:
+                y_test_proba = model.decision_function(X_test)
+            report[name] = roc_auc_score(y_test, y_test_proba)
+        return report
     except Exception as e:
         raise CustomException(e, sys)
