@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 
 from src.pipeline.predict_pipeline import CustomData, PredictPipeline
 
-app = Flask(__name__)
+app = app = Flask(__name__, static_folder="static", template_folder="templates")
 
 
 @app.route("/")
